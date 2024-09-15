@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evrtext</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.0.2/web3.min.js"></script>
+    <script>       
+        if (typeof Web3 !== 'undefined') {
+            console.log('Web3 successfully loaded.');
+            initializeApp(); 
+        } else {
+            console.error('Failed to load Web3 from primary source, trying fallback.');
+          
+            const fallbackUrls = [
+                "https://cdn.jsdelivr.net/npm/web3@4.0.2/dist/web3.min.js",
+                "https://unpkg.com/web3@4.0.2/dist/web3.min.js"
+            ];
+         
+            function loadWeb3Sync(urls) {
+                for (let i = 0; i < urls.length; i++) {
+                    const script = document.createElement('script');
+                    script.src = urls[i];
+                    script.async = false; 
+                    document.head.appendChild(script);
+                    
+                    script.onload = function() {
+                        if (typeof Web3 !== 'undefined') {
+                            console.log(`Web3 loaded from fallback: ${urls[i]}`);
+                            initializeApp();
+                            return;
+                        }
+                    };
+
+                    script.onerror = function() {
+                        console.error(`Failed to load Web3 from ${urls[i]}`);
+                    };
+                }
+            }
+
+            loadWeb3Sync(fallbackUrls);
+        }
+
+        function initializeApp() {
+            console.log('Starting the app...');
+        }
+    </script>
+    <script>
+        window.addEventListener('message', function(event) {
+            if (event.data === 'close-window') {
+                window.location.href = 'https://evrtext.com';
+            }
+        });
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #e0e5ea;
+        }
+        #node-selector {
+            background-color: rgb(255, 255, 255);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 320px;            
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        #polygon-chain-note {
+            color: #4a5568;
+            margin-bottom: 8px;
+        }
+        #node-select {
+            width: 100%;
+            padding: 5px;
+            font-size: 15px;
+            border: 1px solid #a0aec0;
+            border-radius: 4px;
+            background-color: #edf2f7;
+            color: #4a5568;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+        #node-select:hover {
+            border-color: #718096;
+        }
+        #custom-node-input {
+            display: none;
+            width: 100%;
+            padding: 5px;
+            margin: 10px auto 0;
+            font-size: 15px;
+            border: 1px solid #a0aec0;
+            border-radius: 4px;
+            background-color: #edf2f7;
+            color: #4a5568;
+            box-sizing: border-box;
+        }
+        #custom-node-input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+        #confirm-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            color: white;
+            background-color: #4a5568;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        #confirm-button:hover {
+            background-color: #2d3748;
+        }
+    </style>
+</head>
+<body>
+    <div id="node-selector">
+        <h1>Evrtext</h1>
+        <p id="polygon-chain-note">Using Polygon Chain</p>
+        <select id="node-select"></select>
+        <input type="text" id="custom-node-input" placeholder="Enter custom node URL">
+        <button id="confirm-button">Confirm</button>
+    </div>
+
+    <script>
+    window.version = '3';
+    let web3;
+    let nodeSelect;
+    const CONTRACT_ADDRESS = '0xe083ddD2Ba9639308bbCE921174CE321A9fcb30A';
+    const contractABI = [
+        {
+            "inputs": [],
+            "name": "getAdmin",
+            "outputs": [
+                {
+                    "internalType": "string[]",
+                    "name": "",
+                    "type": "string[]"
+                }
+            ],
+            "stateMutability": "view",
+            "type": "function"
+        }
+    ];
+
+    function initWeb3(nodeUrl) {
+        web3 = new Web3(nodeUrl);
+    }
+
+    async function decodeInputData(hex) {
+        try {
+            const data = '0x' + hex.slice(10);
+            const params = await web3.eth.abi.decodeParameters(['string'], data);
+            return params[0];
+        } catch (error) {
+            return false;
+        }
+    }
+
+    async function getData() {
+        try {
+            const contract = new web3.eth.Contract(contractABI, CONTRACT_ADDRESS);
+            const data = await contract.methods.getAdmin().call();
+            return data;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async function evrtext() {
+        let htmlCode = '';
+        const data = await getData();
+        
+        if (data === null || data.length === 0) {
+            return 'Error';
+        }
+        
+        for (let i = 0; i < data.length; i++) {
+            try {
+                const transaction = await web3.eth.getTransaction(data[i]);
+                const inputLog = await decodeInputData(transaction.input);
+                htmlCode += inputLog;
+                
+                console.log(`Code: ${i + 1}`);
+                
+                if (htmlCode.slice(-7).toLowerCase() === '</html>') {
+                    break;
+                }
+            } catch (error) {
+                console.error(`Error processing transaction ${i + 1}:`, error);
+            }
+        }
+        
+        return htmlCode;
+    }
+
+    async function initialize() {
+        const htmlCode = await evrtext();
+        
+        document.body.style.margin = '0';
+        document.body.style.padding = '0';
+        document.body.style.height = '100vh';
+        document.body.style.overflow = 'auto';
+
+        const iframe = document.createElement('iframe');
+        
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.style.border = 'none';
+        iframe.style.position = 'absolute';
+        iframe.style.top = '0';
+        iframe.style.left = '0';
+        
+        document.body.innerHTML = '';
+        document.body.appendChild(iframe);
+        
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        
+        iframeDoc.open();
+        iframeDoc.write(htmlCode);
+        iframeDoc.close();
+    }
+
+    function nodeSelectEvent() {
+        nodeSelect = document.getElementById('node-select');
+        const customNodeInput = document.getElementById('custom-node-input');
+        const confirmButton = document.getElementById('confirm-button');
+        nodeSelect.innerHTML = '';
+        const options = [
+            { value: 'https://polygon-mainnet.infura.io/v3/c7bc5438fbe3478caff45622dc072273', 
+                text: 'Polygon-Infura-Mainnet' },
+            { value: 'https://polygon-mainnet.g.alchemy.com/v2/SDnF9uVjMb95fvE2IG8U4Xz54yiyg5Uj', 
+                text: 'Polygon-Alchemy-Mainnet' },
+            { value: 'https://polygon-mainnet.core.chainstack.com/7caa31e85d239182213c5b9b70020bb5', 
+                text: 'Polygon-Chainstack-Mainnet' },
+            { value: 'https://rpc.ankr.com/polygon', text: 'Polygon-Ankr-Mainnet' },
+            { value: '', text: 'Custom-Node < ... >' }
+        ];
+        
+        options.forEach(option => {
+            const newOption = document.createElement('option');
+            newOption.value = option.value;
+            newOption.text = option.text;
+            nodeSelect.appendChild(newOption);
+        });
+
+        nodeSelect.selectedIndex = 0;
+
+        nodeSelect.addEventListener('change', function() {
+            if (this.selectedIndex === options.length - 1) {
+                customNodeInput.style.display = 'block';
+                customNodeInput.focus();
+            } else {
+                customNodeInput.style.display = 'none';
+            }
+        });
+
+        nodeSelect.addEventListener('mousedown', function() {
+            customNodeInput.style.display = 'none';
+            this.selectedIndex = 0;
+        });
+        
+        customNodeInput.addEventListener('input', updateCustomOption);
+        customNodeInput.addEventListener('keypress', handleEnterKey);
+        document.addEventListener('click', handleOutsideClick);
+
+        confirmButton.addEventListener('click', function() {
+            let selectedNode = nodeSelect.value;
+            if (nodeSelect.selectedIndex === options.length - 1) {
+                selectedNode = customNodeInput.value;
+            }
+            if (selectedNode) {
+                console.log(selectedNode);
+                initWeb3(selectedNode);
+                initialize();
+            } else {
+                alert('Please select a valid node or enter a custom node URL');
+            }
+        });
+
+        function updateCustomOption() {
+            const customOption = nodeSelect.options[nodeSelect.options.length - 1];
+            customOption.value = customOption.text = this.value;
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                this.style.display = 'none';
+                if (/^(Custom-Node <\.\.\.>)?$/.test(nodeSelect.options[nodeSelect.selectedIndex].text.trim())) {
+                    nodeSelect.options[nodeSelect.selectedIndex].text = 'Custom-Node < ... >';
+                    nodeSelect.options[nodeSelect.selectedIndex].value = '';
+                    nodeSelect.selectedIndex = 0;
+                }
+            }
+        }
+
+        function handleOutsideClick(event) {
+            if (customNodeInput.style.display === 'block' && 
+                event.target !== customNodeInput && event.target !== nodeSelect) {
+                customNodeInput.style.display = 'none';
+                if (/^(Custom-Node <\.\.\.>)?$/.test(nodeSelect.options[nodeSelect.selectedIndex].text.trim())) {
+                    nodeSelect.options[nodeSelect.selectedIndex].text = 'Custom-Node < ... >';
+                    nodeSelect.options[nodeSelect.selectedIndex].value = '';
+                    nodeSelect.selectedIndex = 0;
+                }
+            }
+        }
+    }
+
+    nodeSelectEvent();
+    </script>
+</body>
+</html>
