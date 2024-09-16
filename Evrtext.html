@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1280">
     <title>Evrtext</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.0.2/web3.min.js"></script>
     <script>       
         if (typeof Web3 !== 'undefined') {
@@ -213,7 +214,7 @@
         document.body.style.margin = '0';
         document.body.style.padding = '0';
         document.body.style.height = '100vh';
-        document.body.style.overflow = 'auto';
+        document.body.style.overflow = 'hidden';
 
         const iframe = document.createElement('iframe');
         
@@ -232,7 +233,49 @@
         iframeDoc.open();
         iframeDoc.write(htmlCode);
         iframeDoc.close();
+
+        iframe.onload = function() {
+            const iframeBody = iframeDoc.body;
+            const iframeHtml = iframeDoc.documentElement;
+
+            iframeBody.style.margin = '0';
+            iframeBody.style.padding = '0';
+            iframeHtml.style.overflow = 'auto';
+
+            const contentWidth = Math.max(iframeBody.scrollWidth, iframeBody.offsetWidth, 
+                                        iframeHtml.clientWidth, iframeHtml.scrollWidth, iframeHtml.offsetWidth);
+            iframeHtml.style.width = `${contentWidth}px`;
+
+            function applyScale() {
+                const scale = Math.min(1, window.innerWidth / contentWidth);
+                iframeHtml.style.transform = `scale(${scale})`;
+                iframeHtml.style.transformOrigin = 'top left';
+                iframe.style.height = `${window.innerHeight / scale}px`;
+
+                if (scale < 1) {
+                    iframeHtml.style.overflowX = 'auto';
+                    iframe.style.overflowX = 'auto';
+                    
+                    const maxScroll = contentWidth * scale - window.innerWidth;
+                    iframeHtml.addEventListener('scroll', function() {
+                        if (this.scrollLeft < 0) {
+                            this.scrollLeft = 0;
+                        } else if (this.scrollLeft > maxScroll) {
+                            this.scrollLeft = maxScroll;
+                        }
+                    });
+                } else {
+                    iframeHtml.style.overflowX = 'hidden';
+                    iframe.style.overflowX = 'hidden';
+                }
+            }
+
+            applyScale();
+
+            window.addEventListener('resize', applyScale);
+        };
     }
+
 
     function nodeSelectEvent() {
         nodeSelect = document.getElementById('node-select');
