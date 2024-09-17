@@ -6,6 +6,6 @@ Evrtext is a revolutionary platform that enables you to immortalize your words a
 - No rules
 - No limits
 
-This reflects our commitment to providing a permanent and unalterable medium for your messages.
+This provides a permanent and unalterable medium for messages.
 
-With Evrtext, your words and images will be preserved forever, beyond the reach of any entity.
+Your words and images will be preserved forever, beyond the reach of any entity.
